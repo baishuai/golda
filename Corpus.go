@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// 语料库集合,载入语料库
 type Corpus struct {
 	vocabulary *Vocabulary
 	documents  [][]int
@@ -51,7 +52,6 @@ func Load(path string) *Corpus {
 	line, _, err := bio.ReadLine()
 
 	n, err := strconv.Atoi(string(bytes.TrimSpace(line)))
-	fmt.Println("doc size", n)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(-1)
@@ -86,7 +86,7 @@ func LoadDir(dirPath string) *Corpus {
 	}
 
 	for _, f := range files {
-		file, err := os.Open(dirPath+f)
+		file, err := os.Open(dirPath + f)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(-1)

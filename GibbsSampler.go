@@ -1,35 +1,29 @@
 package golda
 
 import (
-	"fmt"
+	"math"
 	"math/rand"
 )
 
-var (
-	_BURN_IN = 100
+const (
 	_ITERATIONS = 1000
-	_SAMPLE_LAG = 10
 )
 
 type GibbsSampler struct {
-	v         int
-	k         int
-	m         int
-	alpha     float64
-	beta      float64
+	v     int
+	k     int
+	m     int
+	alpha float64
+	beta  float64
 
 	documents [][]int
 
-	z         [][]int
-	nw        [][]int
-	nd        [][]int
+	z  [][]int
+	nw [][]int
+	nd [][]int
 
-	nwsum     []int
-	ndsum     []int
-
-	thetasum  [][]float64
-	phisum    [][]float64
-	numstats  int
+	nwsum []int
+	ndsum []int
 }
 
 func LdaGibbsSampler(documents [][]int, v int) *GibbsSampler {
@@ -45,20 +39,7 @@ func (g *GibbsSampler) Gibbs(k int, alpha float64, beta float64) {
 	g.alpha = alpha
 	g.beta = beta
 
-	if _SAMPLE_LAG > 0 {
-		g.numstats = 0
-		g.thetasum = make([][]float64, g.m)
-		for i := 0; i < g.m; i++ {
-			g.thetasum[i] = make([]float64, g.k)
-		}
-		g.phisum = make([][]float64, g.k)
-		for i := 0; i < g.k; i++ {
-			g.phisum[i] = make([]float64, g.v)
-		}
-	}
 	g.initialState()
-
-	//fmt.Println("Sampling ", _ITERATIONS, " iterations with burn-in of ", _BURN_IN, " (B/S=", _THIN_INTERVAL, ").")
 
 	for i := 0; i < _ITERATIONS; i++ {
 		for m := 0; m < g.m; m++ {
@@ -67,14 +48,10 @@ func (g *GibbsSampler) Gibbs(k int, alpha float64, beta float64) {
 				g.z[m][n] = topic
 			}
 		}
-
-		if (i > _BURN_IN) && (_SAMPLE_LAG > 0) && (i % _SAMPLE_LAG == 0) {
-			g.updateParams()
-		}
 	}
-	fmt.Println()
 }
 
+// 随机初始化状态
 func (g *GibbsSampler) initialState() {
 
 	g.nw = make([][]int, g.v)
@@ -105,6 +82,7 @@ func (g *GibbsSampler) initialState() {
 	}
 }
 
+// 计算文档m中第n个词语的主题的完全条件分布，输出最可能的主题
 func (g *GibbsSampler) sampleFullConditional(m, n int) int {
 
 	topic := g.z[m][n]
@@ -115,14 +93,14 @@ func (g *GibbsSampler) sampleFullConditional(m, n int) int {
 
 	p := make([]float64, g.k)
 	for k := 0; k < g.k; k++ {
-		p[k] = (float64(g.nw[g.documents[m][n]][k]) + g.beta) / (float64(g.nwsum[k]) + float64(g.v) * g.beta) * (float64(g.nd[m][k]) + g.alpha) / (float64(g.ndsum[m]) + float64(g.k) * g.alpha)
+		p[k] = (float64(g.nw[g.documents[m][n]][k]) + g.beta) / (float64(g.nwsum[k]) + float64(g.v)*g.beta) * (float64(g.nd[m][k]) + g.alpha) / (float64(g.ndsum[m]) + float64(g.k)*g.alpha)
 	}
 
 	for k := 1; k < g.k; k++ {
-		p[k] += p[k - 1]
+		p[k] += p[k-1]
 	}
 
-	u := rand.Float64() * p[g.k - 1]
+	u := rand.Float64() * p[g.k-1]
 	for topic = 0; topic < g.k; topic++ {
 		if u < p[topic] {
 			break
@@ -137,59 +115,49 @@ func (g *GibbsSampler) sampleFullConditional(m, n int) int {
 	return topic
 }
 
-func (g *GibbsSampler) updateParams() {
-	for m := 0; m < g.m; m++ {
-		for k := 0; k < g.k; k++ {
-			g.thetasum[m][k] += (float64(g.nd[m][k]) + g.alpha) / (float64(g.ndsum[m]) + float64(g.k) * g.alpha)
-		}
-	}
-	for k := 0; k < g.k; k++ {
-		for w := 0; w < g.v; w++ {
-			g.phisum[k][w] += (float64(g.nw[w][k]) + g.beta) / (float64(g.nwsum[k]) + float64(g.v) * g.beta)
-		}
-	}
-	g.numstats++
-}
-
-func (g *GibbsSampler) GetPhi() [][]float64 {
+// 获取主题——词语矩阵, K x V
+func (g *GibbsSampler) getPhi() [][]float64 {
 	phi := make([][]float64, g.k)
-
-	if _SAMPLE_LAG > 0 {
-		for k := 0; k < g.k; k++ {
-			phi[k] = make([]float64, g.v)
-			for w := 0; w < g.v; w++ {
-				phi[k][w] = g.phisum[k][w] / float64(g.numstats)
-			}
-		}
-	} else {
-		for k := 0; k < g.k; k++ {
-			phi[k] = make([]float64, g.v)
-			for w := 0; w < g.v; w++ {
-				phi[k][w] = (float64(g.nw[w][k]) + g.beta) / (float64(g.nwsum[k]) + float64(g.v) * g.beta)
-			}
+	for k := 0; k < g.k; k++ {
+		phi[k] = make([]float64, g.v)
+		for w := 0; w < g.v; w++ {
+			phi[k][w] = (float64(g.nw[w][k]) + g.beta) / (float64(g.nwsum[k]) + float64(g.v)*g.beta)
 		}
 	}
 	return phi
 }
 
-func (g *GibbsSampler)getTheta() [][]float64 {
+// 获取文档——主题矩阵, M x K
+func (g *GibbsSampler) getTheta() [][]float64 {
 	theta := make([][]float64, g.m)
 	for i := 0; i < g.m; i++ {
 		theta[i] = make([]float64, g.k)
 	}
 
-	if _SAMPLE_LAG > 0 {
-		for m := 0; m < g.m; m++ {
-			for k := 0; k < g.k; k++ {
-				theta[m][k] = g.thetasum[m][k] / float64(g.numstats)
-			}
-		}
-	} else {
-		for m := 0; m < g.m; m++ {
-			for k := 0; k < g.k; k++ {
-				theta[m][k] = (float64(g.nd[m][k]) + g.alpha) / (float64(g.ndsum[m]) + float64(g.k) * g.alpha)
-			}
+	for m := 0; m < g.m; m++ {
+		for k := 0; k < g.k; k++ {
+			theta[m][k] = (float64(g.nd[m][k]) + g.alpha) / (float64(g.ndsum[m]) + float64(g.k)*g.alpha)
 		}
 	}
 	return theta
+}
+
+// 计算结果的likelihood
+func (g *GibbsSampler) LogLike() float64 {
+
+	theta := g.getTheta()
+	phi := g.getPhi()
+	lik := 0.0
+	for d := 0; d < g.m; d++ {
+		lw := len(g.documents[d])
+		for w := 0; w < lw; w++ {
+			word := g.documents[d][w]
+			tmp := 0.0
+			for k := 0; k < g.k; k++ {
+				tmp += theta[d][k] * phi[k][word]
+			}
+			lik += math.Log(tmp)
+		}
+	}
+	return lik
 }

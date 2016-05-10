@@ -32,7 +32,8 @@ func Explain(result []_Topic) {
 	}
 }
 
-func Translate(phi [][]float64, vocabulary *Vocabulary, limit int) []_Topic {
+func (g *GibbsSampler) Translate(vocabulary *Vocabulary, limit int) []_Topic {
+	phi := g.getPhi()
 	if len(phi[0]) < limit {
 		limit = len(phi[0])
 	}
@@ -43,7 +44,7 @@ func Translate(phi [][]float64, vocabulary *Vocabulary, limit int) []_Topic {
 		rankPair := make(_Topic, 0)
 		lphik := len(phi[k])
 		for i := 0; i < lphik; i++ {
-			rankPair = append(rankPair, pair{key:vocabulary.getWord(i), value:phi[k][i]})
+			rankPair = append(rankPair, pair{key: vocabulary.getWord(i), value: phi[k][i]})
 		}
 		sort.Sort(rankPair)
 		rankPair = rankPair[:limit]
