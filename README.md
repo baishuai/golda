@@ -1,5 +1,9 @@
 LDA implementd using Golang laguage
 
+## LDA实验报告
+白帅 P15240002
+
+### 代码构成
 
 ```sh
 ./
@@ -12,14 +16,44 @@ LDA implementd using Golang laguage
     ├── data.txt
     └── example.go
 ```
+实验使用golang语言完成，主要有4部分。
+* Vocabulary.go 是单词的集合，单词和id之间的互相映射关系，内部为map实现。
+* Corpus.go 实现了语料库的处理。包括载入整个实验数据并且进行单词和id的转化，所有文档中的单词id组成文档集合
+* Util.go 负责结果的展示
+* GibbsSampler.go 最核心的部分，采样过程，完全条件分布计算，主题-词语矩阵计算，文档-主题矩阵计算
 
-### Usage
-`cd example`
-`go run example.go`
-or you can use other k values by run
-`go run example.go -k int`
+### 数据输入
+使用作业中默认给定的数据输入格式，输入数据已经包含在特定的代码目录结构中，输入文件路径不需修改。
 
-### Result
+程序支持命令行参数，`k` `alpha` `beta`  
+```sh
+-a float
+      alpha (default 1)
+-b float
+      beta (default 0.1)
+-k int
+      topic number (default 3)
+```
+
+程序输出到终端，为对应topic数量下的topic explanation，以及对应的LogLikelihood和程序运行时间
+
+
+### 运行代码
+
+*	首先需要安装go语言运行环境，for example using OS X，`brew install go`
+*	设置GOPATH， `export GOPATH=”PATH_TO_YOUR_DIR”`
+*	安装代码，解压提交压缩包，src文件夹复制到GOPATH。或者通过命令进行网络安装，`go get github.com/baishuai/golda/example`
+* 进入程序目录，cd $GOPATH/src/github.com/baishuai/golda/example
+*	运行 go run example.go 或者go run example.go -k 6
+
+### 结果统计
+
+
+![](./time.png)
+
+![](./likelihood.png)
+
+<!-- ### Result
 ```
 i= 2, LogLikelihood: -430779.972246 time 13.975162 s
 i= 3, LogLikelihood: -424804.304056 time 16.269073 s
@@ -40,7 +74,7 @@ i= 17, LogLikelihood: -419390.658564 time 37.995627 s
 i= 18, LogLikelihood: -419439.018298 time 38.983892 s
 i= 19, LogLikelihood: -420691.716497 time 40.828173 s
 i= 20, LogLikelihood: -421379.494022 time 41.777093 s
-```
+``` -->
 
 ### Explain
 ```
